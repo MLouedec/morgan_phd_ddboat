@@ -200,7 +200,7 @@ class ControlBlock:
         cmdL, cmdR = convert_motor_control_signal(u, self.v, self.wmLeft, self.wmRight, self.cmdL_old, self.cmdR_old, self.dt)
         return cmdL, cmdR, u
 
-    def follow_reference2(self,pd, pd_dot, pd_ddot,r=4): # same as above with control_feedback_linearization2
+    def follow_reference2(self,pd, pd_dot=np.zeros((2,1)), pd_ddot=np.zeros((2,1)),r=4): # same as above with control_feedback_linearization2
         u = control_feedback_linearization2(pd, pd_dot, pd_ddot, self.dt, self.p, self.v, self.th, self.qx, self.qy,r)
         cmdL, cmdR = convert_motor_control_signal(u, self.v, self.wmLeft, self.wmRight, self.cmdL_old, self.cmdR_old,
                                                   self.dt)
