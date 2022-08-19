@@ -10,9 +10,10 @@ The drivers are :
 The controller loop is composed of:
 * filter : DDBOAT_filter_v1.py
 * low level control : DDBOAT_controler.py
-* trajectory tracking navigation : Angers_mission.py | Log saved in Log directory
+* mission block toolbox : mission_param.py
+* trajectory tracking navigation : Mission_trajectory_tracking.py | Log saved in Log directory
 
-Mission instruction descibed by : angers_mission_script.json
+Mission instruction descibed by : mission_script.json
 
 Additional tests:
 * synchronise time with GPS (hour min sec) : gps_driver_v3.py
