@@ -18,12 +18,20 @@
 #################################################
 
 import numpy as np
-from math import sin, cos, atan2
+from math import sin, cos, atan2, sqrt
 
-k1, k3 = 0.01,0.006#150, 50
-K = np.array([[k1, k1], [-k3, k3]])
 B = np.array([[1, 1], [-1, 1]])
-K_inv = np.linalg.inv(K)
+
+kT, kpwm, kD, kw = 0.01, 1.5, 1, 0.06  # kpwm verified
+m = 2.5  # weight of the DDBOAT (verified)
+umax = 200
+wlrmax = umax / kpwm
+vmax = sqrt(2 * kT / kD) * wlrmax
+wmax = sqrt(kw * kT) * wlrmax
+rmax = vmax / wmax
+amax = 2 * kT * umax ** 2 / (m * kpwm ** 2)
+kp, kd, kth = 1, 2, 1
+K_inv = 1 / (2 * kT) * np.array([[m, -1 / kw], [m, 1 / kw]])
 
 
 def sawtooth(x):
@@ -107,19 +115,33 @@ def control_feedback_linearization(pd, pd_dot, pd_ddot, dt, p, v, th, qx, qy):
     ed = np.array([[v * cos(th) + qx, v * sin(th) + qy]]).T - pd_dot  # velocity error
     A = np.array([[cos(th), -v * sin(th)], [sin(th), v * cos(th)]])  # transition matrix, p_ddot = A*u
     kc = 0.1
-    u = np.linalg.inv(A) @ (pd_ddot - 2 * kc * ed - kc * e)  # [scalar acceleration, angular velocity]
+    u = np.linalg.inv(A) @ (pd_ddot - kd * ed - kp * e)  # [scalar acceleration, angular velocity]
+    u = control_saturate(u, v)
     return u
 
-def control_feedback_linearization2(pd, pd_dot, pd_ddot, dt, p, v, th, qx, qy,r=4):
+
+def control_feedback_linearization2(pd, pd_dot, pd_ddot, dt, p, v, th, qx, qy, r=4):
     # as above but modified. the robot wait if ahead of the reference bellow r meters of distance
 
-    if np.linalg.norm(pd-p)<r and np.dot(np.transpose(p-pd),pd_dot)>0:
+    if np.linalg.norm(pd - p) < r and np.dot(np.transpose(p - pd), pd_dot) > 0:
         th_d = atan2(pd_dot[1, 0], pd_dot[0, 0])
         e = sawtooth(th_d - th)
-        # ~ print(th_d,e)
-        return np.array([[-0.1*np.linalg.norm(pd_dot)],[0.1 * e]])
+        u = np.array([[-0.1 * np.linalg.norm(pd_dot)], [0.1 * e]])
+        u = control_saturate(u, v)
     else:
-        return control_feedback_linearization(pd, pd_dot, pd_ddot, dt, p, v, th, qx, qy)
+        u = control_feedback_linearization(pd, pd_dot, pd_ddot, dt, p, v, th, qx, qy)
+
+    return u
+
+
+def control_saturate(u, v): # saturation of u = [v_dot,w] to avoid motor saturation
+    # the acceleration is constrained by the angular velocity
+    u[1,0] = min(wmax,max(-wmax,u[1,0])) # -wmax < w < wmax
+    D = kd * v * abs(v) # damping force
+    al = -D / m + u[1, 0] ** 2 / (kw * m) # minimun acceleration possible
+    aL = amax - D / m - u[1, 0] ** 2 / (kw * m) # maximum acceleration possible
+    u[0, 0] = min(max(al, u[0, 0]), aL) # al < a < aL
+    return u
 
 
 def control_station_keeping(a, d, pos, th, v=1):  # controller to keep the robot next ot a position
@@ -136,35 +158,26 @@ def control_station_keeping(a, d, pos, th, v=1):  # controller to keep the robot
     else:
         return 0, 0
 
+
 ###############################################
 # LINK WITH THE MOTORS
 
 def convert_motor_control_signal(u, v_hat, wmLeft, wmRight, cmdL_old, cmdR_old,
                                  dt):  # compute pwd control signal for the motors
-    # u: controller output [v_dot,w] (m/s^2), (rad/s)
+    # u: controller output [v_dot,w] (m/s^2), (rad/s) (must be saturated for correct behavior)
     # v_hat: boat estimated speed given by the propeller (m/s)
     # wmLeft, wmRight : measured rotation speed of the motors (turn/sec)
-    k2, kpwm = 0.5, 2
-    thust = min(u[0,0] + k2*v_hat,1.5) # desired thurst, can only be positive
-    if thust < 0: # can't go backward
-        if u[1,0]>0:
-            return(0,200)
-        else:
-            return(200,0)
-    mat = K_inv @ np.array([[thust,u[1,0]]]).T
-    wmLeft_d, wmRight_d = mat.flatten()
-    # saturation between 0 and 200 turn / sec
-    if wmLeft_d < 0 or wmRight_d < 0:  # lower motor saturation, the propellers can't go backward
-        min_motor = min(wmLeft_d, wmRight_d)
-        wmLeft_d, wmRight_d = wmLeft_d - min_motor+50, wmRight_d - min_motor+50
-    if wmLeft_d > 200 or wmRight_d > 200:  # upper motor saturation
-        max_motor = max(wmLeft_d, wmRight_d)
-        wmLeft_d = 200*wmLeft_d/max_motor
-        wmRight_d = 200*wmRight_d/max_motor
+    D = kD * v_hat * abs(v_hat)
+    wm_sqr = K_inv @ (np.array([[u[0, 0]], [u[1, 0] * abs(u[1, 0])]]) + D / m)  # [wl**2 , wr**2]
+    wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
 
     # discrete proportional corrector for Pwm
-    cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft),0),200)
-    cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight),0),200)
+    cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft), 0), 200)
+    cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight), 0), 200)
+
+    # security saturation of the output
+    cmdL = max(0, min(umax, cmdL))
+    cmdR = max(0, min(umax, cmdR))
     return cmdL, cmdR  # controlled PWM
 
 
@@ -172,7 +185,7 @@ def convert_motor_control_signal(u, v_hat, wmLeft, wmRight, cmdL_old, cmdR_old,
 # general control
 
 class ControlBlock:
-    def __init__(self, dt,traj0,r=4):
+    def __init__(self, dt, traj0, r=4):
         self.state = 0  # 0 : move towards waypoint , 1 : move towards desired heading, 2 : stop
         self.dt = dt
         self.pd0 = np.reshape(np.array([traj0["pd"]]), (2, 1))
@@ -180,10 +193,10 @@ class ControlBlock:
         self.pd_dot0 = np.reshape(np.array([traj0["pd_dot"]]), (2, 1))
         self.th_d0 = atan2(self.pd_dot0[1, 0], self.pd_dot0[0, 0])
         self.pd_ddot0 = np.reshape(np.array([traj0["pd_ddot"]]), (2, 1))
-        self.r = r # radius of the station keeping circle
-        self.t_burst = 0.0 # burst time for state 1
+        self.r = r  # radius of the station keeping circle
+        self.t_burst = 0.0  # burst time for state 1
 
-    def variable_update(self,p,v,th,qx,qy,wmLeft,wmRight,cmdL_old,cmdR_old):
+    def variable_update(self, p, v, th, qx, qy, wmLeft, wmRight, cmdL_old, cmdR_old):
         self.p = p
         self.v = v
         self.th = th
@@ -195,30 +208,33 @@ class ControlBlock:
         self.cmdR_old = cmdR_old
         return
 
-    def follow_reference(self,pd, pd_dot, pd_ddot):  # make control_feedback_linearization and convert_motor_control_signal
+    def follow_reference(self, pd, pd_dot,
+                         pd_ddot):  # make control_feedback_linearization and convert_motor_control_signal
         u = control_feedback_linearization(pd, pd_dot, pd_ddot, self.dt, self.p, self.v, self.th, self.qx, self.qy)
-        cmdL, cmdR = convert_motor_control_signal(u, self.v, self.wmLeft, self.wmRight, self.cmdL_old, self.cmdR_old, self.dt)
-        return cmdL, cmdR, u
-
-    def follow_reference2(self,pd, pd_dot=np.zeros((2,1)), pd_ddot=np.zeros((2,1)),r=4): # same as above with control_feedback_linearization2
-        u = control_feedback_linearization2(pd, pd_dot, pd_ddot, self.dt, self.p, self.v, self.th, self.qx, self.qy,r)
         cmdL, cmdR = convert_motor_control_signal(u, self.v, self.wmLeft, self.wmRight, self.cmdL_old, self.cmdR_old,
                                                   self.dt)
         return cmdL, cmdR, u
 
-    def burst(self,t):
+    def follow_reference2(self, pd, pd_dot=np.zeros((2, 1)), pd_ddot=np.zeros((2, 1)),
+                          r=4):  # same as above with control_feedback_linearization2
+        u = control_feedback_linearization2(pd, pd_dot, pd_ddot, self.dt, self.p, self.v, self.th, self.qx, self.qy, r)
+        cmdL, cmdR = convert_motor_control_signal(u, self.v, self.wmLeft, self.wmRight, self.cmdL_old, self.cmdR_old,
+                                                  self.dt)
+        return cmdL, cmdR, u
+
+    def burst(self, t):
         Delta_t = t - self.t_burst
         # ~ print(Delta_t)
-        t1,t2 = 30, 5
-        if t1+t2 > Delta_t > t1:  # bust of 1 sec every 10 sec
+        t1, t2 = 30, 5
+        if t1 + t2 > Delta_t > t1:  # bust of 1 sec every 10 sec
             return 75, 75, np.zeros((2, 1))
-        elif Delta_t > t1+t2:
+        elif Delta_t > t1 + t2:
             self.t_burst = t
         return 0, 0, np.zeros((2, 1))
 
-    def station_keeping1(self,t): # basic station keeping with in and out circle
+    def station_keeping1(self, t):  # basic station keeping with in and out circle
         # change state
-        if self.state == 0 and np.linalg.norm(self.pd0 - self.p) < self.r/2:
+        if self.state == 0 and np.linalg.norm(self.pd0 - self.p) < self.r / 2:
             self.state = 1
             self.t_burst = t
         if self.state == 1 and np.linalg.norm(self.pd0 - self.p) > self.r:
@@ -232,13 +248,14 @@ class ControlBlock:
         if self.state == 1:
             return self.burst(t)
 
-    def station_keeping2(self,t):
+    def station_keeping2(self, t):
         # advanced station keeping to have correct heading
 
         # change state
         if self.state == 0:
-            self.pd1 = self.pd0 - 0.5 * self.r * self.pd_dot0 / np.linalg.norm(self.pd_dot0)  # desired position for state 0
-            if np.linalg.norm(self.pd1 - self.p) < self.r/2:
+            self.pd1 = self.pd0 - 0.5 * self.r * self.pd_dot0 / np.linalg.norm(
+                self.pd_dot0)  # desired position for state 0
+            if np.linalg.norm(self.pd1 - self.p) < self.r / 2:
                 self.state = 1
         if self.state == 1:
             e = sawtooth(self.th_d0 - self.th)
@@ -250,11 +267,12 @@ class ControlBlock:
         print(self.state)
 
         # compute control
-        if self.state == 0: # go towards pd1
+        if self.state == 0:  # go towards pd1
             return self.follow_reference(self.pd1, self.pd_dot0, self.pd_ddot0)
-        if self.state == 1: # turn towards th_d heading
+        if self.state == 1:  # turn towards th_d heading
             u = np.array([[0, 0.1 * e]]).T
-            cmdL, cmdR = convert_motor_control_signal(u, self.v, self.wmLeft, self.wmRight, self.cmdL_old, self.cmdR_old, self.dt)
-            return cmdL,cmdR, u
-        if self.state == 2: # don't move
+            cmdL, cmdR = convert_motor_control_signal(u, self.v, self.wmLeft, self.wmRight, self.cmdL_old,
+                                                      self.cmdR_old, self.dt)
+            return cmdL, cmdR, u
+        if self.state == 2:  # don't move
             return self.burst(t)
