@@ -24,13 +24,16 @@ def taking_a_measurement(imu):
     print("measuring ", x1.T)
     return x1
     
-def delta_odo (odo1,odo0):
+def delta_odo (odo1,odo0): # TODO remise à 0 par le sinus car bug quand 2 remises à 0 ?
     dodo = odo1-odo0
     if dodo > 32767:
         dodo -= 65536
     if dodo < -32767:
         dodo += 65536
+    # dodo = (2*pi/(2**16)) * (odo1-odo0) # doit être dans [-pi,pi]
+    # dodo = ((2**16)/(2*pi)) * sin(dodo) # revient au valeurs de l'encodeur
     return dodo
+
 
 
 class DdboatFilter:
