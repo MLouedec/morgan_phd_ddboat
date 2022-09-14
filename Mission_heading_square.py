@@ -25,7 +25,7 @@ while time.time() < mp.time_mission_max:
     # update heading controller
     cmdL, cmdR, w = heading_regul(v_d, th_d, mp.y_th,mp.wmLeft, mp.wmRight, mp.CB.cmdL_old, mp.CB.cmdR_old,mp.dt)
     mp.ard.send_arduino_cmd_motor(cmdL, cmdR)
-    mp.log_rec.log_control_update(w, th_d, mp.wmLeft, mp.wmRight, cmdL, cmdR, pd, mp.y_th, mp.kal) # note w and th_d replace u[0,0] and u[1,0]
+    mp.log_rec.log_control_update(th_d, w, mp.wmLeft, mp.wmRight, cmdL, cmdR, pd, mp.y_th, mp.kal) # note w and th_d replace u[0,0] and u[1,0]
     mp.kal.Kalman_update(np.zeros((2,1)), mp.y_th)
     mp.log_rec.log_update_write()  # write in the log file
 
