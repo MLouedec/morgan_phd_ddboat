@@ -6,7 +6,7 @@ mp = MissionBlock(rh=True) # trajectory is useless
 # init variables
 k, pd, pos_old, t_pos_old, cmdL, cmdR = 0, mp.CB.pd0, mp.kal.p(), time.time(), 0, 0
 
-waypoint_list = np.array([[]]) # home, west, north-west
+waypoint_list = np.array([[48.199024,48.199038,48.199817],[-3.014790,-3.015807,-3.015603]]) # home, west, north-west
 print("waypoint list:",waypoint_list)
 
 # convert waypoint to local coordinate

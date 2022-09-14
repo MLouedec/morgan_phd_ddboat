@@ -5,14 +5,13 @@ from mission_param import *
 mp = MissionBlock(rh=True) # the trajectory is useless
 # init variables
 k, pd, pos_old, t_pos_old, cmdL, cmdR = 0, mp.CB.pd0, mp.kal.p(), time.time(), 0, 0
+print("Starting the square mission")
 wait_for_signal = False  # after time mission begin, the robot start following the trajectory
 
 heading_list = [0,np.pi/2,np.pi,-np.pi]
 time_init = time.time()
 while time.time() < mp.time_mission_max:
     mp.measure(cmdL, cmdR)
-
-    print("Starting the square mission")
     # update reference
     t = time.time()-time_init
     i = int(t//30) # turn every 30 second
@@ -21,12 +20,13 @@ while time.time() < mp.time_mission_max:
     except:
         break # mission finished
     v_d = 0.5 # m/s
+    print("th_d",th_d)
 
     # update heading controller
     cmdL, cmdR, w = heading_regul(v_d, th_d, mp.y_th,mp.wmLeft, mp.wmRight, mp.CB.cmdL_old, mp.CB.cmdR_old,mp.dt)
     mp.ard.send_arduino_cmd_motor(cmdL, cmdR)
     mp.log_rec.log_control_update(w, th_d, mp.wmLeft, mp.wmRight, cmdL, cmdR, pd, mp.y_th, mp.kal) # note w and th_d replace u[0,0] and u[1,0]
-    mp.kal.Kalman_update(0, mp.y_th)
+    mp.kal.Kalman_update(np.zeros((2,1)), mp.y_th)
     mp.log_rec.log_update_write()  # write in the log file
 
     # loop update

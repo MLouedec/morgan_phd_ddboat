@@ -18,7 +18,11 @@ class MissionBlock:
         param = data_script["mission_param"]
         trajs = data_script["trajectories"]
         mission_robot_id = param["mission_robot_id"]
-        self.traj = trajs[mission_robot_id]  # list of desired pose
+        try:
+            self.traj = trajs[mission_robot_id]  # list of desired pose
+        except:
+            print("no trajectory leaded")
+            self.traj = [[0]]
         print("robot id", mission_robot_id)
 
         # time parameters

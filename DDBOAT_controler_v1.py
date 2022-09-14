@@ -48,7 +48,8 @@ def heading_regul(v_d, th_d, th,wmLeft, wmRight, cmdL_old, cmdR_old,
     # th: current heading (rad)
     K = 1  # controller gain
     w = K * sawtooth(th_d - th)  # angular speed
-    return convert_motor_control_signal2(v_d,w,wmLeft, wmRight, cmdL_old, cmdR_old,dt),w
+    cmdL,cmdR =  convert_motor_control_signal2(v_d,w,wmLeft, wmRight, cmdL_old, cmdR_old,dt)
+    return cmdL,cmdR,w
 
 
 def follow_point(b, m):  # compute the desired heading to follow the point b
@@ -187,6 +188,8 @@ def convert_motor_control_signal2(vd,wd,wmLeft, wmRight, cmdL_old, cmdR_old,
     # vd desired speed (m/s)
     # wd desired angular speed (rad/s)
     wm_sqr = B_inv @ (np.array([[vd*vd], [wd * abs(wd)]]))  # [wl**2 , wr**2]
+    wm_sqr[0,0] = max(0,wm_sqr[0,0])
+    wm_sqr[1,0] = max(0,wm_sqr[1,0])
     wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
 
     # discrete proportional corrector for Pwm
@@ -206,11 +209,20 @@ class ControlBlock:
     def __init__(self, dt, traj0, r=4):
         self.state = 0  # 0 : move towards waypoint , 1 : move towards desired heading, 2 : stop
         self.dt = dt
-        self.pd0 = np.reshape(np.array([traj0["pd"]]), (2, 1))
-        self.pd1 = self.pd0
-        self.pd_dot0 = np.reshape(np.array([traj0["pd_dot"]]), (2, 1))
-        self.th_d0 = atan2(self.pd_dot0[1, 0], self.pd_dot0[0, 0])
-        self.pd_ddot0 = np.reshape(np.array([traj0["pd_ddot"]]), (2, 1))
+        try:
+            self.pd0 = np.reshape(np.array([traj0["pd"]]), (2, 1))
+            self.pd1 = self.pd0
+            self.pd_dot0 = np.reshape(np.array([traj0["pd_dot"]]), (2, 1))
+            self.th_d0 = atan2(self.pd_dot0[1, 0], self.pd_dot0[0, 0])
+            self.pd_ddot0 = np.reshape(np.array([traj0["pd_ddot"]]), (2, 1))
+        except:
+            print("no trajectory loaded")
+            self.pd0 = np.zeros((2,1))
+            self.pd1 = self.pd0
+            self.pd_dot0 = self.pd0
+            self.th_d0 = self.pd0
+            self.pd_ddot0 = self.pd0
+
         self.r = r  # radius of the station keeping circle
         self.t_burst = 0.0  # burst time for state 1
 

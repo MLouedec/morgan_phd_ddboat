@@ -23,14 +23,19 @@ def cvt_gll_ddmm_2_dd(val):  # get lat lon from gps raw data val
         return olat, olon
         
 class GpsIO:
-    def __init__(self):
+    def __init__(self,tty_dev=0):
         # open serial line connected to the GPS sensor
-        self.init_line()
         #time.sleep(1.0)
         #print(ser)
+        self.tty_dev = "/dev/ttyGPS0"
+        if tty_dev == 1:
+          self.tty_dev =  "/dev/ttyGPS1"
+        if tty_dev == 2:
+          self.tty_dev =  "/dev/ttyGPS2"
+        self.init_line()
    
     def init_line(self,timeout=1.0):
-        self.ser = serial.Serial('/dev/ttyS0',timeout=timeout)
+        self.ser = serial.Serial(self.tty_dev,timeout=timeout)
 
     def init_line_devname_baudrate(self,devname,baudrate,timeout=1.0):
         self.ser = serial.Serial(devname,baudrate=baudrate,timeout=timeout,xonxoff=False, rtscts=False, dsrdtr=False)
