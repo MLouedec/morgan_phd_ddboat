@@ -31,22 +31,24 @@ wmax = sqrt(kw * kT) * wlrmax
 rmax = vmax / wmax
 amax = 2 * kT * umax ** 2 / (m * kpwm ** 2)
 kp, kd, kth = 1, 2, 1
-K_inv = 1 / (2 * kT) * np.array([[m, -1 / kw], [m, 1 / kw]])
+K_inv = 1 / (2 * kT) * np.array([[m, -1 / kw], [m, 1 / kw]]) # [wl*wl wr*wr].T = K_inv * ([v_dot, w*|w|].T + D/m)
+B = kT*np.array([[1/kD,1/kD],[-kw,kw]]) # [v*v,w*|w|] = B * [wl*wl wr*wr].T
+B_inv = np.linalg.inv(B)#
+
 
 
 def sawtooth(x):
     return (x + np.pi) % (2 * np.pi) - np.pi
 
 
-def regul(v_d, th_d, th):  # compute the motor control signal
+def heading_regul(v_d, th_d, th,wmLeft, wmRight, cmdL_old, cmdR_old,
+                                 dt):  # compute the motor control signal
     # v_d: desired speed (m/s)
     # th_d: desired heading (rad)
     # th: current heading (rad)
     K = 1  # controller gain
     w = K * sawtooth(th_d - th)  # angular speed
-    mat = np.linalg.inv(B) @ np.array([[v_d], [w]])
-    ul, ur = mat.flatten()  # left right
-    return ul, ur  # in m/s
+    return convert_motor_control_signal2(v_d,w,wmLeft, wmRight, cmdL_old, cmdR_old,dt),w
 
 
 def follow_point(b, m):  # compute the desired heading to follow the point b
@@ -97,7 +99,7 @@ def control_lisssajou(p, th, pd, min_v=0.1, max_v=10):
     th_d = follow_point(pd, p)  # follow the line [mX)
     dist_error = np.linalg.norm(pd - p)
     v = min((1 + 0.1 * dist_error ** 2) * min_v, max_v)  # speed depends on quadratic error and is saturated
-    return regul(v, th_d, th)
+    return heading_regul(v, th_d, th)
 
 
 def control_feedback_linearization(pd, pd_dot, pd_ddot, dt, p, v, th, qx, qy):
@@ -169,6 +171,22 @@ def convert_motor_control_signal(u, v_hat, wmLeft, wmRight, cmdL_old, cmdR_old,
     # wmLeft, wmRight : measured rotation speed of the motors (turn/sec)
     D = kD * v_hat * abs(v_hat)
     wm_sqr = K_inv @ (np.array([[u[0, 0]], [u[1, 0] * abs(u[1, 0])]]) + D / m)  # [wl**2 , wr**2]
+    wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
+
+    # discrete proportional corrector for Pwm
+    cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft), 0), 200)
+    cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight), 0), 200)
+
+    # security saturation of the output
+    cmdL = max(0, min(umax, cmdL))
+    cmdR = max(0, min(umax, cmdR))
+    return cmdL, cmdR  # controlled PWM
+
+def convert_motor_control_signal2(vd,wd,wmLeft, wmRight, cmdL_old, cmdR_old,
+                                 dt): # same as above but consider a speed in unput instead of an acceleration
+    # vd desired speed (m/s)
+    # wd desired angular speed (rad/s)
+    wm_sqr = B_inv @ (np.array([[vd*vd], [wd * abs(wd)]]))  # [wl**2 , wr**2]
     wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
 
     # discrete proportional corrector for Pwm
