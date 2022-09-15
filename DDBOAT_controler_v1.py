@@ -66,6 +66,9 @@ def follow_line(a, b, m):  # compute the desired heading to follow the line [ab)
     u = (b - a) / np.linalg.norm(b - a)  # unit vector of the line
     e = np.linalg.det(np.hstack([u, m - a]))  # distance error with the line
     phi = np.arctan2(b[1, 0] - a[1, 0], b[0, 0] - a[0, 0])  # orientation of the line
+    phi = sawtooth(phi-np.pi/2) # convert to angle with north reference
+    print("phi",phi)
+    print("correct",np.arctan(e/r))
     ang = sawtooth(phi - np.arctan(e / r))  # desired heading
     # print("desired ANG (deg)", ang * 180 / np.pi)
     return ang

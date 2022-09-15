@@ -18,25 +18,31 @@ print("waypoint list local:",waypoint_list)
 while time.time() < mp.time_mission_max:
 
     mp.measure(cmdL,cmdR)
+    print("current position:",mp.kal.p().T)
 
     # test change of line
     a = waypoint_list[:, [k]]
     b = waypoint_list[:, [k + 1]]
-    if np.dot(b-a,mp.kal.p()-b): # if the boat has passed the end of the line
+    if np.dot((b-a).flatten(),(mp.kal.p()-b).flatten())>0: # if the boat has passed the end of the line
         print("next line")
         k +=1
-        if k>(len(waypoint_list[0])-1):
+        if k>(len(waypoint_list[0])-2):
             print("mission done")
             break
-
+    print(" ")
     # update reference
     th_d = follow_line(a, b, mp.kal.p())
     v_d = 0.5 # m/s
+    
+    print("th",mp.y_th)
+    print("th_d:",th_d)
+    print("b-a",(b-a).T)
+    print("m-a",(mp.kal.p()-a).T)
 
     cmdL, cmdR, w = heading_regul(v_d, th_d, mp.y_th,mp.wmLeft, mp.wmRight, mp.CB.cmdL_old, mp.CB.cmdR_old,mp.dt)
-    mp.ard.send_arduino_cmd_motor(cmdL, cmdR)
+    mp.ard.send_arduino_cmd_motor(0*cmdL, 0*cmdR)
     mp.log_rec.log_control_update(th_d, w, mp.wmLeft, mp.wmRight, cmdL, cmdR, b, mp.y_th, mp.kal) # note w and th_d replace u[0,0] and u[1,0]
-    mp.kal.Kalman_update(0, mp.y_th)
+    mp.kal.Kalman_update(np.zeros((2,1)), mp.y_th)
     mp.log_rec.log_update_write()  # write in the log file
 
     # loop update
