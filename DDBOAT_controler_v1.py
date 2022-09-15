@@ -46,7 +46,7 @@ def heading_regul(v_d, th_d, th,wmLeft, wmRight, cmdL_old, cmdR_old,
     # v_d: desired speed (m/s)
     # th_d: desired heading (rad)
     # th: current heading (rad)
-    K = 1  # controller gain
+    K = 0.5  # controller gain
     w = K * sawtooth(th_d - th)  # angular speed
     cmdL,cmdR =  convert_motor_control_signal2(v_d,w,wmLeft, wmRight, cmdL_old, cmdR_old,dt)
     return cmdL,cmdR,w
@@ -62,11 +62,10 @@ def follow_line(a, b, m):  # compute the desired heading to follow the line [ab)
     # a: beginning of the line
     # b: end of the line
     # m: current position
-    r = 8  # gain
+    r =4  # gain
     u = (b - a) / np.linalg.norm(b - a)  # unit vector of the line
     e = np.linalg.det(np.hstack([u, m - a]))  # distance error with the line
     phi = np.arctan2(b[1, 0] - a[1, 0], b[0, 0] - a[0, 0])  # orientation of the line
-    phi = sawtooth(phi-np.pi/2) # convert to angle with north reference
     print("phi",phi)
     print("correct",np.arctan(e/r))
     ang = sawtooth(phi - np.arctan(e / r))  # desired heading
@@ -175,6 +174,9 @@ def convert_motor_control_signal(u, v_hat, wmLeft, wmRight, cmdL_old, cmdR_old,
     # wmLeft, wmRight : measured rotation speed of the motors (turn/sec)
     D = kD * v_hat * abs(v_hat)
     wm_sqr = K_inv @ (np.array([[u[0, 0]], [u[1, 0] * abs(u[1, 0])]]) + D / m)  # [wl**2 , wr**2]
+    wm_sqr[0,0] = max(0,wm_sqr[0,0])
+    wm_sqr[1,0] = max(0,wm_sqr[1,0])
+
     wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
 
     # discrete proportional corrector for Pwm

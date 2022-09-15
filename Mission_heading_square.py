@@ -8,7 +8,7 @@ k, pd, pos_old, t_pos_old, cmdL, cmdR = 0, mp.CB.pd0, mp.kal.p(), time.time(), 0
 print("Starting the square mission")
 wait_for_signal = False  # after time mission begin, the robot start following the trajectory
 
-heading_list = [0,np.pi/2,np.pi,-np.pi]
+heading_list = [np.pi/2,np.pi,-np.pi/2,0] # 0 is east
 time_init = time.time()
 while time.time() < mp.time_mission_max:
     mp.measure(cmdL, cmdR)
@@ -19,7 +19,7 @@ while time.time() < mp.time_mission_max:
         th_d = heading_list[i]
     except:
         break # mission finished
-    v_d = 0.5 # m/s
+    v_d = 5 # m/s
     print("th_d",th_d)
 
     # update heading controller

@@ -32,7 +32,7 @@ while time.time() < mp.time_mission_max:
     print(" ")
     # update reference
     th_d = follow_line(a, b, mp.kal.p())
-    v_d = 0.5 # m/s
+    v_d = 5 # m/s
     
     print("th",mp.y_th)
     print("th_d:",th_d)
@@ -40,7 +40,7 @@ while time.time() < mp.time_mission_max:
     print("m-a",(mp.kal.p()-a).T)
 
     cmdL, cmdR, w = heading_regul(v_d, th_d, mp.y_th,mp.wmLeft, mp.wmRight, mp.CB.cmdL_old, mp.CB.cmdR_old,mp.dt)
-    mp.ard.send_arduino_cmd_motor(0*cmdL, 0*cmdR)
+    mp.ard.send_arduino_cmd_motor(cmdL, cmdR)
     mp.log_rec.log_control_update(th_d, w, mp.wmLeft, mp.wmRight, cmdL, cmdR, b, mp.y_th, mp.kal) # note w and th_d replace u[0,0] and u[1,0]
     mp.kal.Kalman_update(np.zeros((2,1)), mp.y_th)
     mp.log_rec.log_update_write()  # write in the log file
