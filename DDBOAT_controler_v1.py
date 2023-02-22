@@ -179,7 +179,7 @@ def convert_motor_control_signal(u, v_hat, wmLeft, wmRight, cmdL_old, cmdR_old,
 
     wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
 
-    # discrete proportional corrector for Pwm
+    # discrete proportional integral corrector for Pwm
     cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft), 0), 200)
     cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight), 0), 200)
 
@@ -197,7 +197,7 @@ def convert_motor_control_signal2(vd,wd,wmLeft, wmRight, cmdL_old, cmdR_old,
     wm_sqr[1,0] = max(0,wm_sqr[1,0])
     wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
 
-    # discrete proportional corrector for Pwm
+    # discrete proportional integral corrector for Pwm
     cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft), 0), 200)
     cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight), 0), 200)
 

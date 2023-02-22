@@ -191,7 +191,7 @@ class StateObserver:
         return
 
     def Kalman_correct(self, y):  # measurement correction of the kalman filter
-        # y : measure [x,y,x-x_old,y-y_old]
+        # y : measure [x,y]
         self.y = y
         Zk = y - self.Ck @ self.X # g(x) is linear
         Sk = self.Ck @ self.Gamma @ self.Ck.T + self.Gamma_beta
