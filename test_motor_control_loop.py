@@ -16,7 +16,7 @@ if __name__ == "__main__":
     print("testing motor control")
 
     ard, _, _, encoddrv, _ = init_drivers()
-    kpwm = 2
+    kpwm = 1.5
     filt = DdboatFilter(0, 0, np.zeros((3,3)), np.zeros((3,1)), encoddrv)
 
     dt = 0.1  # 10hz

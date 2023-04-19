@@ -7,7 +7,7 @@ from log_driver import LogRecorder, init_drivers, time, robot_number
 import json
 import sys
 
-file_script = open("angers_mission_script.json", "r")
+file_script = open("mission_script.json", "r")
 file_script2 = open("compass_calibration/compass_calibration_ddboat"+robot_number+".json", "r")
 data_script = json.load(file_script)
 data_script2 = json.load(file_script2)

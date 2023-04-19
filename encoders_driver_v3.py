@@ -28,22 +28,22 @@ switchLR = [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,1] # in robot id order
 class EncoderIO():
     def __init__(self):
         self.baud_rate = 115200
-        self.init_line()
         self.voltLeftFilt = 500.0
         self.voltRightFilt = 500.0
         self.a = 0.99
         self.sync = False
-
+        self.dev_tty = '/dev/ttyENCRAW'
+        self.init_line()
     def init_line(self,timeout=1.0):
-        self.ser = serial.Serial('/dev/ttyUSB0',self.baud_rate,timeout=timeout)
+        self.ser = serial.Serial(self.dev_tty,self.baud_rate,timeout=timeout)
 
     # in principle , no need to use this function , baudrate is normally 115200 with
     # the current software version
     def set_baudrate(self,baudrate=115200):
         self.baud_rate = baudrate
-        st = os.system ("stty -F /dev/ttyUSB0 %d"%(self.baud_rate))
+        st = os.system ("stty -F %s %d"%(self.dev_tty,self.baud_rate))
         print (st)
-        st = os.system ("stty -F /dev/ttyUSB0")
+        st = os.system ("stty -F %s"%(self.dev_tty))
         print (st)
 
     def close_line(self):
