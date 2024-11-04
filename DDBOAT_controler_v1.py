@@ -22,7 +22,7 @@ from math import sin, cos, atan2, sqrt
 
 B = np.array([[1, 1], [-1, 1]])
 
-kT, kpwm, kD, kw = 0.01, 1.5, 1, 0.06  # kpwm verified
+kT, kpwm, kD, kw = 0.01, 1., 1, 0.06  # kpwm verified
 m = 2.5  # weight of the DDBOAT (verified)
 umax = 200
 wlrmax = umax / kpwm
@@ -41,14 +41,13 @@ def sawtooth(x):
     return (x + np.pi) % (2 * np.pi) - np.pi
 
 
-def heading_regul(v_d, th_d, th,wmLeft, wmRight, cmdL_old, cmdR_old,
-                                 dt):  # compute the motor control signal
+def heading_regul(v_d, th_d, th):  # compute the motor control signal
     # v_d: desired speed (m/s)
     # th_d: desired heading (rad)
     # th: current heading (rad)
-    K = 0.5  # controller gain
+    K = 5  # controller gain
     w = K * sawtooth(th_d - th)  # angular speed
-    cmdL,cmdR =  convert_motor_control_signal2(v_d,w,wmLeft, wmRight, cmdL_old, cmdR_old,dt)
+    cmdL,cmdR =  convert_motor_control_signal(v_d,w)
     return cmdL,cmdR,w
 
 
@@ -167,43 +166,42 @@ def control_station_keeping(a, d, pos, th, v=1):  # controller to keep the robot
 ###############################################
 # LINK WITH THE MOTORS
 
-def convert_motor_control_signal(u, v_hat, wmLeft, wmRight, cmdL_old, cmdR_old,
-                                 dt):  # compute pwd control signal for the motors
-    # u: controller output [v_dot,w] (m/s^2), (rad/s) (must be saturated for correct behavior)
-    # v_hat: boat estimated speed given by the propeller (m/s)
-    # wmLeft, wmRight : measured rotation speed of the motors (turn/sec)
-    D = kD * v_hat * abs(v_hat)
-    wm_sqr = K_inv @ (np.array([[u[0, 0]], [u[1, 0] * abs(u[1, 0])]]) + D / m)  # [wl**2 , wr**2]
-    wm_sqr[0,0] = max(0,wm_sqr[0,0])
-    wm_sqr[1,0] = max(0,wm_sqr[1,0])
+# def convert_motor_control_signal(u, v_hat, wmLeft, wmRight, cmdL_old, cmdR_old,
+#                                  dt):  # compute pwd control signal for the motors
+#     # u: controller output [v_dot,w] (m/s^2), (rad/s) (must be saturated for correct behavior)
+#     # v_hat: boat estimated speed given by the propeller (m/s)
+#     # wmLeft, wmRight : measured rotation speed of the motors (turn/sec)
+#     D = kD * v_hat * abs(v_hat)
+#     wm_sqr = K_inv @ (np.array([[u[0, 0]], [u[1, 0] * abs(u[1, 0])]]) + D / m)  # [wl**2 , wr**2]
+#     wm_sqr[0,0] = max(0,wm_sqr[0,0])
+#     wm_sqr[1,0] = max(0,wm_sqr[1,0])
+#
+#     wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
+#
+#     # discrete proportional integral corrector for Pwm
+#     cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft), 0), 200)
+#     cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight), 0), 200)
+#
+#     # security saturation of the output
+#     cmdL = max(0, min(umax, cmdL))
+#     cmdR = max(0, min(umax, cmdR))
+#     return cmdL, cmdR  # controlled PWM
 
-    wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
-
-    # discrete proportional integral corrector for Pwm
-    cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft), 0), 200)
-    cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight), 0), 200)
-
-    # security saturation of the output
-    cmdL = max(0, min(umax, cmdL))
-    cmdR = max(0, min(umax, cmdR))
-    return cmdL, cmdR  # controlled PWM
-
-def convert_motor_control_signal2(vd,wd,wmLeft, wmRight, cmdL_old, cmdR_old,
-                                 dt): # same as above but consider a speed in unput instead of an acceleration
+def convert_motor_control_signal(vd,wd): # convert desired speed to motor control signal (open loop)
     # vd desired speed (m/s)
     # wd desired angular speed (rad/s)
     wm_sqr = B_inv @ (np.array([[vd*vd], [wd * abs(wd)]]))  # [wl**2 , wr**2]
+
+    # square must not be negative
     wm_sqr[0,0] = max(0,wm_sqr[0,0])
     wm_sqr[1,0] = max(0,wm_sqr[1,0])
+
     wmLeft_d, wmRight_d = sqrt(wm_sqr[0, 0]), sqrt(wm_sqr[1, 0])
 
-    # discrete proportional integral corrector for Pwm
-    cmdL = min(max(cmdL_old + dt * kpwm * (wmLeft_d - wmLeft), 0), 200)
-    cmdR = min(max(cmdR_old + dt * kpwm * (wmRight_d - wmRight), 0), 200)
+    # convert to pwm
+    cmdL = min(max(kpwm * wmLeft_d, 0), umax)
+    cmdR = min(max(kpwm * wmRight_d, 0), umax)
 
-    # security saturation of the output
-    cmdL = max(0, min(umax, cmdL))
-    cmdR = max(0, min(umax, cmdR))
     return cmdL, cmdR  # controlled PWM
 
 

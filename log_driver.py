@@ -1,6 +1,6 @@
+from motors import encoders_driver_v3 as encod
 import arduino_driver_v2 as ardu
-import tc74_driver_v2 as tc74
-import encoders_driver_v3 as encod
+# import tc74_driver_v2 as tc74
 import imu9_driver_v2 as imudv
 import gps_driver_v3 as gpsdrv
 import logging
@@ -99,11 +99,11 @@ def init_drivers():  # test connection to sensors and return sensor class
         ard_ = 0
         print("arduino interface not working")
 
-    try:
-        temperature_ = tc74.TempTC74IO()
-    except:
-        temperature_ = 0
-        print("temperature sensor not connected")
+    # try:
+    #     temperature_ = tc74.TempTC74IO()
+    # except:
+    #     temperature_ = 0
+    #     print("temperature sensor not connected")
 
     try:
         gps_ = gpsdrv.GpsIO()

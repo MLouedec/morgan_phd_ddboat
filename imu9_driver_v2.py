@@ -2,10 +2,18 @@ import struct
 import time
 import sys
 import math
+from sunau import AUDIO_FILE_ENCODING_LINEAR_32
+
 import i2creal as i2c  # currently only real I2C on ddboats (no simulated I2C)
+import json
+import numpy as np
 
 # LIS3DML 0x1e  (mag sensor)
 # LSM6    0x6b  (accelero - gyro)
+
+def sawtooth(x):
+    # return (x + pi) % (2 * pi) - pi  # or equivalently   2*arctan(tan(x/2))
+    return 2*np.arctan(np.tan(x/2))
 
 class Imu9IO():
     def __init__(self):
@@ -71,6 +79,11 @@ class Imu9IO():
         # IF_INC = 1 (automatically increment address register)
         self.__dev_i2c_ag.write(0x12,[0x04])
 
+        # calibration parameters
+        self.b = np.zeros(3)
+        self.A = np.eye(3)
+        self.R_imu = np.eye(3)
+
     def setup_accel_filter (self,mode):
         if mode == 0:
             self.__dev_i2c_ag.write(0x17,[0x00])
@@ -127,37 +140,139 @@ class Imu9IO():
             heading += 360.0
         return heading
 
-    def fast_heading_calibration (self, magx_min, magx_max, magy_min, magy_max):
-        self.magx_min = magx_min
-        self.magx_max = magx_max
-        self.magy_min = magy_min
-        self.magy_max = magy_max
-        self.magx_offs = (magx_min+magx_max)/2.0
-        self.magy_offs = (magy_min+magy_max)/2.0
-        self.magx_scale = 2./(magx_max-magx_min)
-        self.magy_scale = 2./(magy_max-magy_min)
+    # def fast_heading_calibration (self, magx_min, magx_max, magy_min, magy_max):
+    #     self.magx_min = magx_min
+    #     self.magx_max = magx_max
+    #     self.magy_min = magy_min
+    #     self.magy_max = magy_max
+    #     self.magx_offs = (magx_min+magx_max)/2.0
+    #     self.magy_offs = (magy_min+magy_max)/2.0
+    #     self.magx_scale = 2./(magx_max-magx_min)
+    #     self.magy_scale = 2./(magy_max-magy_min)
         
-    def heading(self,magx,magy):
-        magx_cal = (magx - self.magx_offs) * self.magx_scale
-        magy_cal = (magy - self.magy_offs) * self.magy_scale
-        #print (self.magx_min,magx,self.magx_max,self.magy_min,magy,self.magy_max,magx_cal,magy_cal)
-        magx_cal = 1.0 if magx_cal>1.0 else magx_cal
-        magx_cal = -1.0 if magx_cal<-1.0 else magx_cal
-        magy_cal = 1.0 if magy_cal>1.0 else magy_cal
-        magy_cal = -1.0 if magy_cal<-1.0 else magy_cal
-        heading = math.atan2(magy_cal,magx_cal)
+    # def heading(self,magx,magy):
+    #     magx_cal = (magx - self.magx_offs) * self.magx_scale
+    #     magy_cal = (magy - self.magy_offs) * self.magy_scale
+    #     #print (self.magx_min,magx,self.magx_max,self.magy_min,magy,self.magy_max,magx_cal,magy_cal)
+    #     magx_cal = 1.0 if magx_cal>1.0 else magx_cal
+    #     magx_cal = -1.0 if magx_cal<-1.0 else magx_cal
+    #     magy_cal = 1.0 if magy_cal>1.0 else magy_cal
+    #     magy_cal = -1.0 if magy_cal<-1.0 else magy_cal
+    #     heading = math.atan2(magy_cal,magx_cal)
+    #     return heading
+
+    def heading(self, mag_cal,pitch,roll):
+        # take into acount the pitch and the roll
+        # pitch and roll are in rad
+        # magx_cal and magy_cal are the corrected magnetometer data
+        # the function returns the heading in rad
+
+        R_pitch = np.array([[np.cos(pitch),0,np.sin(pitch)],
+                            [0,1,0],
+                            [-np.sin(pitch),0,np.cos(pitch)]])
+        R_roll = np.array([[1,0,0],
+                            [0,np.cos(roll),-np.sin(roll)],
+                            [0,np.sin(roll),np.cos(roll)]])
+        mag2 = R_pitch@R_roll@mag_cal
+
+        heading = sawtooth(math.atan2(mag2[1],-mag2[0]))
+        return heading  # rad
+
+    def heading_simple(self,mag_cal):
+        # don't take into account the pitch and the roll
+        heading = math.atan2(mag_cal[1],-mag_cal[0])
         return heading
-        
-    def heading_deg(self,magx,magy):
-        heading = self.heading(magx,magy)*180.0/math.pi
+
+    def heading_deg(self,mag_cal,pitch,roll):
+        heading = self.heading(mag_cal,pitch,roll)*180.0/math.pi
         if heading < 0.0:
             heading += 360.0
         return heading
+
+    def load_calibration_parameters(self,filename):
+        # the filename is a json file with the following format:
+        # {
+        #     "b": [
+        #         63.0471,
+        #         -1459.85,
+        #         4230.56
+        #     ],
+        #     "A": [0.971949,
+        #           -0.0440482,
+        #           -0.0512878,
+        #           -0.0440482,
+        #           1.03232,
+        #           0.00679035,
+        #           -0.0512878,
+        #           0.00679035,
+        #           1.0013
+        #           ]
+        # }
+        with open(filename) as f:
+            data = json.load(f)
+            self.b = data["b"]
+            self.A = np.array(data["A"]).reshape(3,3)
+            # self.heading_N = data["heading_N"] # heading of the north in deg
+            # self.heading_N_rad = self.heading_N*math.pi/180.0
+            print("loaded calibration parameters")
+            print("b:",self.b)
+            print("A:",self.A)
+
+            mag_x = np.array(data["mag_x"])
+            mag_y = np.array(data["mag_y"])
+            mag_z = np.array(data["mag_z"])
+
+            self.R_imu = np.eye(3)
+            mag_x_cal = self.correct_data(mag_x)
+            mag_y_cal = self.correct_data(mag_y)
+            mag_z_cal = self.correct_data(mag_z)
+
+            x = mag_x_cal/np.linalg.norm(mag_x_cal)
+            y = mag_y_cal/np.linalg.norm(mag_y_cal)
+            z = mag_z_cal/np.linalg.norm(mag_z_cal)
+
+            print("x:",x)
+            print("y:",y)
+            print("z:",z)
+            M = np.array([x,y,z]).T
+            M = 0.5*(M+M.T)
+            print("M:",M)
+            self.R_imu = np.linalg.inv(M)
+            print("R_imu:",self.R_imu)
+
+    def correct_data(self,data):
+        # data is a 3 element list with the raw magnetometer data
+        # the function returns the corrected data
+        data = np.array(data)
+        data = data - self.b
+        data = self.R_imu@np.dot(self.A,data)
+        return data
+
+    def get_pitch_roll(self):
+        # use the accelerometer to evaluate the pitch and roll
+        accel  = self.R_imu@self.read_accel_raw()
+        pitch = math.atan2(accel[0],math.sqrt(accel[1]*accel[1]+accel[2]*accel[2]))
+        roll = math.atan2(-accel[1],math.sqrt(accel[0]*accel[0]+accel[2]*accel[2])) # axis inverted
+        return pitch,roll
+
+
     
                     
 if __name__ == "__main__":
     imu = Imu9IO()
-    for i in range(200):
-        print (imu.read_mag_raw(),imu.read_accel_raw(),imu.read_gyro_raw())
-        time.sleep(0.01)
+    imu.load_calibration_parameters("compass/compass_parameters.json")
+    for i in range(2000):
+        raw_mag = imu.read_mag_raw()
+        print ("\nraw_data:",raw_mag,imu.read_accel_raw(),imu.read_gyro_raw())
+        corrected_mag = imu.correct_data(raw_mag)
+        print("corrected_mag:",corrected_mag)
+
+        pitch,roll = imu.get_pitch_roll()
+        print("pitch:",pitch*180.0/math.pi)
+        print("roll:",roll*180.0/math.pi)
+
+        heading = imu.heading(corrected_mag,pitch,roll)
+        print("heading:",heading)
+        print("heading_deg:",imu.heading_deg(corrected_mag,pitch,roll))
+        time.sleep(0.5)
 

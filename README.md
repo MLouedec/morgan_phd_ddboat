@@ -23,3 +23,14 @@ Additional tests:
 * display heading and local global position : scout.py
 
 Compass parameters in compass_calibration/
+
+# the compass is calibrated using the tools from https://github.com/godardma/magnetic_calibration
+
+compass_recorder.py
+creates the data.txt file with a record of the magnetic measurement x y z
+
+after the calibration, the compass_parameters.json file is update
+in this file there are two parameters b (3d vector) and A (3x3 matrix)
+
+the correction is made with the linaer transformation
+mag_corrected = A * (mag - b)
