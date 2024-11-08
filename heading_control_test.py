@@ -24,11 +24,16 @@ th_d = 0 # desired heading
 for i in range(6000):
     raw_mag = imu.read_mag_raw()
     # print("\nraw_data:", raw_mag, imu.read_accel_raw(), imu.read_gyro_raw())
-    mag_cal = imu.correct_data(raw_mag)
+    mag_cal = imu.cal_mag(raw_mag)
     pitch,roll = imu.get_pitch_roll()
     th = imu.heading_simple(mag_cal) # rad
 
     cmdL, cmdR, w_d = heading_regul(0,th_d,th)
+
+    # safely staturate the command in [0,50]
+    cmdL = max(min(cmdL,30),0)
+    cmdR = max(min(cmdR,30),0)
+
     ard.send_arduino_cmd_motor(cmdL, cmdR)
 
     print("\ndesired heading:", th_d* 180.0 / math.pi)

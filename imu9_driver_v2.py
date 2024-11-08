@@ -190,24 +190,7 @@ class Imu9IO():
         return heading
 
     def load_calibration_parameters(self,filename):
-        # the filename is a json file with the following format:
-        # {
-        #     "b": [
-        #         63.0471,
-        #         -1459.85,
-        #         4230.56
-        #     ],
-        #     "A": [0.971949,
-        #           -0.0440482,
-        #           -0.0512878,
-        #           -0.0440482,
-        #           1.03232,
-        #           0.00679035,
-        #           -0.0512878,
-        #           0.00679035,
-        #           1.0013
-        #           ]
-        # }
+        # load the mag calibration parameters b and A
         with open(filename) as f:
             data = json.load(f)
             self.b = data["b"]
@@ -223,9 +206,9 @@ class Imu9IO():
             mag_z = np.array(data["mag_z"])
 
             self.R_imu = np.eye(3)
-            mag_x_cal = self.correct_data(mag_x)
-            mag_y_cal = self.correct_data(mag_y)
-            mag_z_cal = self.correct_data(mag_z)
+            mag_x_cal = self.cal_mag(mag_x)
+            mag_y_cal = self.cal_mag(mag_y)
+            mag_z_cal = self.cal_mag(mag_z)
 
             x = mag_x_cal/np.linalg.norm(mag_x_cal)
             y = mag_y_cal/np.linalg.norm(mag_y_cal)
@@ -240,16 +223,17 @@ class Imu9IO():
             self.R_imu = np.linalg.inv(M)
             print("R_imu:",self.R_imu)
 
-    def correct_data(self,data):
-        # data is a 3 element list with the raw magnetometer data
-        # the function returns the corrected data
-        data = np.array(data)
-        data = data - self.b
-        data = self.R_imu@np.dot(self.A,data)
-        return data
+    def cal_mag(self,mag):
+        # mag is the raw magnetometer data
+        # the function returns the calibrated magnetometer data
+        c_mag = np.array(mag)
+        c_mag = c_mag - self.b
+        c_mag = self.R_imu@np.dot(self.A,c_mag)
+        return c_mag
 
     def get_pitch_roll(self):
         # use the accelerometer to evaluate the pitch and roll
+        # the vibration must be fitered before calling this function
         accel  = self.R_imu@self.read_accel_raw()
         pitch = math.atan2(accel[0],math.sqrt(accel[1]*accel[1]+accel[2]*accel[2]))
         roll = math.atan2(-accel[1],math.sqrt(accel[0]*accel[0]+accel[2]*accel[2])) # axis inverted
@@ -260,19 +244,20 @@ class Imu9IO():
                     
 if __name__ == "__main__":
     imu = Imu9IO()
+    imu.setup_accel_filter(0)
     imu.load_calibration_parameters("compass/compass_parameters.json")
     for i in range(2000):
         raw_mag = imu.read_mag_raw()
         print ("\nraw_data:",raw_mag,imu.read_accel_raw(),imu.read_gyro_raw())
-        corrected_mag = imu.correct_data(raw_mag)
-        print("corrected_mag:",corrected_mag)
+        c_mag = imu.cal_mag(raw_mag)
+        print("calibrated_mag:",c_mag)
 
         pitch,roll = imu.get_pitch_roll()
         print("pitch:",pitch*180.0/math.pi)
         print("roll:",roll*180.0/math.pi)
 
-        heading = imu.heading(corrected_mag,pitch,roll)
+        heading = imu.heading(c_mag,pitch,roll)
         print("heading:",heading)
-        print("heading_deg:",imu.heading_deg(corrected_mag,pitch,roll))
+        print("heading_deg:",imu.heading_deg(c_mag,pitch,roll))
         time.sleep(0.5)
 

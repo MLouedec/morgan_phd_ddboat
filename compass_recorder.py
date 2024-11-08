@@ -3,7 +3,7 @@ import time
 import json
 print("Choose the mode: ")
 print("1. Record the data during 1 min")
-print("2. Record the North, Ouest, Up data")
+print("2. Record the X,Y,Z data")
 mode = int(input("Enter the mode:"))
 print("you have chosen the mode:", mode)
 

@@ -3,9 +3,10 @@
 The drivers are :
 * IMU (MAG, ACCEL, GYRO) : imu9_driver_v2.py
 * GPS (serial line, GPGLL message) : gps_driver_v2.py
-* Encoders on propeller rotation (serial line) : encoders_driver_v2.py
 * Arduino motors command (serial line) : arduino_driver_v2.py
-* TC74 temperature sensors (one per motor) : tc74_driver_v2.py
+
+[//]: # (* Encoders on propeller rotation &#40;serial line&#41; : encoders_driver_v2.py)
+[//]: # (* TC74 temperature sensors &#40;one per motor&#41; : tc74_driver_v2.py)
 
 The controller loop is composed of:
 * filter : DDBOAT_filter_v1.py
