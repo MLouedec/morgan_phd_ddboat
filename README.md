@@ -1,12 +1,10 @@
-# DDBOAT python3 drivers version 2 - fork modified by morgan
+# Custom version of the DDBOAT drivers
+original version : https://gitlab.ensta-bretagne.fr/zerrbe/drivers-ddboat-v2
 
 The drivers are :
 * IMU (MAG, ACCEL, GYRO) : imu9_driver_v2.py
 * GPS (serial line, GPGLL message) : gps_driver_v2.py
 * Arduino motors command (serial line) : arduino_driver_v2.py
-
-[//]: # (* Encoders on propeller rotation &#40;serial line&#41; : encoders_driver_v2.py)
-[//]: # (* TC74 temperature sensors &#40;one per motor&#41; : tc74_driver_v2.py)
 
 The controller loop is composed of:
 * filter : DDBOAT_filter_v1.py
@@ -35,3 +33,5 @@ in this file there are two parameters b (3d vector) and A (3x3 matrix)
 
 the correction is made with the linaer transformation
 mag_corrected = A * (mag - b)
+
+# the client_scripts folder contains the scripts to run on ground pc to communicate with the boat
