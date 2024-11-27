@@ -22,6 +22,7 @@ class StateObserver:
         self.y = np.array([[0, 0]]).T
         self.th = th0  # measurement of the heading
         self.Ck = np.array([[1, 0, 0, 0,0], [0, 1, 0, 0,0]])
+        print("kalman filter created")
 
     def p(self):  # robot position
         return self.X[0:2, :]

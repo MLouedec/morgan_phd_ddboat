@@ -1,6 +1,46 @@
 # square mission based on heading from Guerledan teaching
 
 from DDBOAT_mission import *
+import sys
+
+if __name__ == "__main__":
+    # step 1: load the mission parameters
+    try:
+        mission_filename = sys.argv[1]
+        MB = MissionBlock(mission_filename)
+
+        # Log
+        LOG = LogRecorder(MB.local_time_mission_begin,MB.robot_id)
+    except:
+        print("mission file not found, stop the scipt")
+        sys.exit()
+
+    try:
+        # step 2: wait for the beginning of the mission
+        MB.wait_for_mission_begin()
+
+        # step 3: mission execution
+        init_time = time.time()
+        while True:
+            t1 = time.time()
+            if t1-init_time > MB.time_mission_max:
+                break
+            MB.measure()
+            MB.control()
+            MB.log_rec.log_update_write()
+
+            t2 = time.time()
+            if t2 - t1 < MB.dt:
+                time.sleep(MB.dt - (t2 - t1))
+
+    except KeyboardInterrupt:
+        print("Server shutting down.")
+        shutdown_flag = True
+    finally:
+        MB.DS.server_socket.close() # Close the server socket to unblock accept()
+        MB.DS.accept_thread.join() # Wait for the accept thread to finish
+        print("Server shut down.")
+
 
 mp = MissionBlock(rh=True) # the trajectory is useless
 # init variables

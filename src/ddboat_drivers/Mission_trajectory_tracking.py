@@ -1,6 +1,6 @@
 # main script of the trajectory tracking mission, the robot must follow a desired moving target
 
-from mission_param import *
+from DDBOAT_mission import *
 
 mp = MissionBlock(rh=True)
 # init variables

@@ -20,6 +20,7 @@ class LogRecorder:
         logging.basicConfig(filename='Log/DDBOAT' + str(robot_id) + "_t_" + number + '.log', level=logging.DEBUG,
                             format='%(asctime)s - %(levelname)s - %(message)s')
         self.msg = ""  # string buffer for log messages
+        print("log file created: Log/DDBOAT" + str(robot_id) + "_t_" + number + '.log')
 
     def log_observe_update(self, ard_, gps_, imu_):
 
@@ -32,18 +33,21 @@ class LogRecorder:
             self.msg = self.msg + "/cmdl:"+str(cmdl)+","
             self.msg = self.msg + "cmdr:"+str(cmdr)+"/"
         except:
-            data = -1
+            cmdl = None
+            cmdr = None
             logging.error("can't log the motor command")
 
         try:
             gll_ok, val = gps_.read_gll_non_blocking()
+            lat, lon = gpsdrv.cvt_gll_ddmm_2_dd(val)
             if gll_ok:
                 self.msg = self.msg + "GPS " + str(val) + "/"
             else:
                 self.msg = self.msg + "GPS-timeout/"
         except:
             gll_ok = False
-            val = -1
+            lat = None
+            lon = None
             logging.error("can't log the GPS")
 
         try:
@@ -60,27 +64,28 @@ class LogRecorder:
                         ",PITCH:" + str(pitch) + ",ROLL:" + str(roll) + ",YAW:" + str(heading) + "/")
         except:
             mag, accel, gyro = [], [], []
+            roll, pitch, heading = None, None, None
             logging.error("can't log the imu")
-        return data, gll_ok, val, mag, accel, gyro
+        return cmdl, cmdr, gll_ok, lat,lon, roll, pitch, heading,mag,accel,gyro
 
-    def log_control_update(self, acc, wd, Wmleft, Wmright,CmdL,CmdR,pd, th,Kal=None):
-        try:  # log desired pose
-            self.msg = self.msg + "DESIREDPOSITION " + str(pd.tolist()) + " /"
-        except:
-            self.msg = self.msg
-        
-        self.msg = self.msg + "CONTROL: ACCD " + str(acc) + " WD " + str(wd) + " "
-        self.msg = self.msg + "WMLEFT " + str(Wmleft) + " WMRIGHT " + str(Wmright) + " "
-        self.msg = self.msg + "CMDL " + str(CmdL) + " CMDR " + str(CmdR) + " "
-        self.msg = self.msg + "THETA " + str(th) + " /"
-
-        if Kal:  # log kalman filter if it exist
-            X = str(Kal.X.tolist())
-            g = str(Kal.Gamma.tolist())
-            U = str(Kal.u.tolist())
-            Y = str(Kal.y.tolist())
-            self.msg = self.msg + "KAL: STATE " + X + " COVARIANCE " + g + " INPUT " + U + " OUTPUT " + Y + " /"
-        return
+    # def log_control_update(self, acc, wd, Wmleft, Wmright,CmdL,CmdR,pd, th,Kal=None):
+    #     try:  # log desired pose
+    #         self.msg = self.msg + "DESIREDPOSITION " + str(pd.tolist()) + " /"
+    #     except:
+    #         self.msg = self.msg
+    #
+    #     self.msg = self.msg + "CONTROL: ACCD " + str(acc) + " WD " + str(wd) + " "
+    #     self.msg = self.msg + "WMLEFT " + str(Wmleft) + " WMRIGHT " + str(Wmright) + " "
+    #     self.msg = self.msg + "CMDL " + str(CmdL) + " CMDR " + str(CmdR) + " "
+    #     self.msg = self.msg + "THETA " + str(th) + " /"
+    #
+    #     if Kal:  # log kalman filter if it exist
+    #         X = str(Kal.X.tolist())
+    #         g = str(Kal.Gamma.tolist())
+    #         U = str(Kal.u.tolist())
+    #         Y = str(Kal.y.tolist())
+    #         self.msg = self.msg + "KAL: STATE " + X + " COVARIANCE " + g + " INPUT " + U + " OUTPUT " + Y + " /"
+    #     return
 
     def log_update_write(self):  # write and reset the message
         logging.info(self.msg)
@@ -90,6 +95,7 @@ class LogRecorder:
 
 # noinspection PyBroadException
 def init_drivers(imu_mode=2,robot_id="0"):  # test connection to sensors and return sensor class
+    print("initialising drivers")
     try:
         ard_ = ardu.ArduinoIO()
     except:
@@ -105,19 +111,19 @@ def init_drivers(imu_mode=2,robot_id="0"):  # test connection to sensors and ret
     try:
         imu_ = imudv.Imu9IO()
         imu_.setup_accel_filter(imu_mode)
-        print("loading compass_parameters_"+str(robot_id)+"+.json")
+        print("loading compass_parameters_"+str(robot_id)+".json")
         imu_.load_calibration_parameters("compass/compass_parameters_"+str(robot_id)+".json")
     except:
         imu_ = 0
         print("imu not connected")
-
+    print("drivers initialised")
     return ard_, gps_, imu_
 
 
 if __name__ == "__main__":
     log = LogRecorder()
 
-    ard, gps, imu = init_drivers(2,5)
+    ard, gps, imu = init_drivers(2,"5")
     print("drivers initialised")
 
     # can have a command line argument to set the motor command

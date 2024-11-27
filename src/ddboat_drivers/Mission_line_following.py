@@ -1,6 +1,6 @@
 # main script of the line following mission with GNSS reference waypoints
 
-from mission_param import *
+from DDBOAT_mission import *
 
 mp = MissionBlock(rh=True) # trajectory is useless
 # init variables

@@ -13,32 +13,51 @@ class DdboatClient:
         self.client_socket.connect((SERVER_HOST, SERVER_PORT))
         print(f"Connected to server at {SERVER_HOST}:{SERVER_PORT}")
 
-def ask_input(DC):
-    while True:
-        inp = input("Enter the desired heading in deg:")
+# def ask_input(DC):
+#     while True:
+#         inp = input("Enter the desired heading in deg:")
+#
+#         # Send a message to the server
+#         message = "DesiredHeading:" + inp
+#         DC.client_socket.send(message.encode())
+#
+#         # Receive the server's response
+#         response_ = DC.client_socket.recv(1024).decode()
+#         print(f"Server response: {response_}")
+#
+#         # ask for the current heading
+#         DC.client_socket.send("Heading".encode())
+#
+#         # Receive the server's response
+#         response_ = DC.client_socket.recv(1024).decode()
+#         print(f"Server response: {response_}")
 
-        # Send a message to the server
-        message = "DesiredHeading:" + inp
-        DC.client_socket.send(message.encode())
-
-        # Receive the server's response
-        response_ = DC.client_socket.recv(1024).decode()
-        print(f"Server response: {response_}")
 
 if __name__ == "__main__":
     DC = DdboatClient()
 
     # create a threading that ask for a desired heading input
-    message_thread = threading.Thread(target=ask_input, args=(DC,))
+    # message_thread = threading.Thread(target=ask_input, args=(DC,))
 
     try:
         while True:
-            # Ask for the current heading
+            inp = input("Enter the desired heading in deg:")
+
+            # Send a message to the server
+            message = "DesiredHeadingDeg:" + inp
+            DC.client_socket.send(message.encode())
+
+            # Receive the server's response
+            response_ = DC.client_socket.recv(1024).decode()
+            print(f"Server response: {response_}")
+
+            # ask for the current heading
+            print("Asking for the current heading")
             DC.client_socket.send("Heading".encode())
 
             # Receive the server's response
-            response = DC.client_socket.recv(1024).decode()
-            print(f"Server response: {response}")
+            response_ = DC.client_socket.recv(1024).decode()
+            print(f"Server response: {response_}")
     except KeyboardInterrupt:
         print("Shutting down the client...")
     finally:

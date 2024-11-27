@@ -1,6 +1,6 @@
 # Simple mission, round trim between the original point and a target
 
-from mission_param import *
+from DDBOAT_mission import *
 
 mp = MissionBlock(rh=True)
 

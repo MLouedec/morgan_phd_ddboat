@@ -9,12 +9,14 @@ The drivers are :
 Toolboxes:
 * Kalman filter : DDBOAT_kalman.py
 * Low level control : DDBOAT_controller.py
-* mission block toolbox : mission_param.py
-* trajectory tracking navigation : Mission_trajectory_tracking.py | Log saved in Log directory
-* Log recorder : log_driver.py
+* mission block toolbox : DDBOAT_mission.py
+* Log recorder : DDBOAT_log.py
+
+
+
 
 Mission instruction descibed by : mission_script.json
-
+[//]: # (* trajectory tracking navigation : Mission_trajectory_tracking.py | Log saved in Log directory)
 Additional tests:
 * synchronise time with GPS (hour min sec) : gps_driver_v3.py
 * synchronise time manually (year month day) : set_date.py
