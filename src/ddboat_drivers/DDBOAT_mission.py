@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json
 from DDBOAT_kalman import StateObserver
-from tcp_server_v2 import DdboatServer, memory
+from DDBOAT_server import DdboatServer, memory
 from gps_driver_v3 import latlon_to_coord
 # from DDBOAT_log import cmdl_g, cmdr_g, roll_g, pitch_g, heading_g, pos_g
 from DDBOAT_log import *
@@ -191,6 +191,9 @@ class MissionBlock:
             if memory.control_mode == "Standby":
                 cmdL,cmdR = 0.,0.  # do nothing
             elif memory.control_mode == "Heading":
+                # print("desired_heading", memory.heading_d)
+                # print("current_heading", memory.heading_g)
+                print("heading error", sawtooth(memory.heading_d - memory.heading_g))
                 cmdL,cmdR,_ = heading_regul(memory.speed_d, memory.heading_d, memory.heading_g)
             elif memory.control_mode == "Waypoint":
                 # 1 meter station keeping

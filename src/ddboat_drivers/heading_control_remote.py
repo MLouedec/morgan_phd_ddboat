@@ -5,7 +5,7 @@ import time
 from DDBOAT_controller import *
 from imu9_driver_v2 import Imu9IO
 from arduino_driver_v2 import ArduinoIO
-from tcp_server_v2 import *
+from DDBOAT_server import *
 import math
 
 # initialization

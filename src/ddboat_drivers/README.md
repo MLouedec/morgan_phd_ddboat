@@ -11,9 +11,7 @@ Toolboxes:
 * Low level control : DDBOAT_controller.py
 * mission block toolbox : DDBOAT_mission.py
 * Log recorder : DDBOAT_log.py
-
-
-
+* Tcp sever (& shared memory) : DDBOAT_tcp_server.py
 
 Mission instruction descibed by : mission_script.json
 [//]: # (* trajectory tracking navigation : Mission_trajectory_tracking.py | Log saved in Log directory)
@@ -38,3 +36,9 @@ the correction is made with the linaer transformation
 mag_corrected = A * (mag - b)
 
 # the client_scripts folder contains the scripts to run on ground pc to communicate with the boat
+
+# TODO
+implement the line following control on the mission
+update the scout script / set_date
+implement series of instruction (the mode can change...)
+create an auto home script

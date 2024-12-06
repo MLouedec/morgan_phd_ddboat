@@ -19,6 +19,7 @@
 
 import numpy as np
 from math import sin, cos, atan2, sqrt
+from imu9_driver_v2 import sawtooth
 
 B = np.array([[1, 1], [-1, 1]])
 
@@ -33,8 +34,8 @@ B_inv = np.linalg.inv(B)#
 
 k_heading = 0.5  # heading controller gain (s^{-1}) /  high gain = 5
 
-def sawtooth(x):
-    return (x + np.pi) % (2 * np.pi) - np.pi
+# def sawtooth(x):
+#     return (x + np.pi) % (2 * np.pi) - np.pi
 
 def convert_motor_control_signal(vd,wd): # convert desired speed to motor control signal (open loop)
     # vd desired speed (m/s)
@@ -94,7 +95,7 @@ def lissajou_trajectory(c, R, T, t, i, N):
     pd = c + R * np.array([[np.cos(phi1)],
                            [np.sin(phi2)]])
     pd_dot = R * np.array([[-np.pi * 2 / T * np.sin(phi1)],
-                           [np.pi * 4 / T * np.cos(2 * phi2)]])
+                           [np.pi * 4 / T * np.cos(phi2)]])
     pd_ddot = R * np.array([[-(np.pi * 2 / T) ** 2 * np.cos(phi1)],
                             [-(np.pi * 4 / T) ** 2 * np.sin(phi2)]])
     return pd, pd_dot, pd_ddot

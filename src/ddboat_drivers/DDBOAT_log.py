@@ -58,7 +58,7 @@ class LogRecorder:
             # show the calibrated
             mag_cal = imu_.cal_mag(mag)
             pitch, roll = imu_.get_pitch_roll(accel)
-            heading = imu_.heading(mag,pitch,roll)
+            heading = imu_.heading(mag_cal,pitch,roll)
             self.msg = (self.msg + "IMU:MAG" + str(mag) + ",MAG_CAL" + str(mag_cal) +
                         ",ACCEL" + str(accel) + ",GYRO" + str(gyro) + "/" +
                         ",PITCH:" + str(pitch) + ",ROLL:" + str(roll) + ",YAW:" + str(heading) + "/")
