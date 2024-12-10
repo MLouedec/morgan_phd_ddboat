@@ -1,37 +1,17 @@
-# Custom version of the DDBOAT drivers
+# Projet with the DDBOATs and the blueboats
+
+## ddboat_drivers 
+this is the code that is running on the DDBOATs. it contains the modified version of the DDBOAT drivers
 original version : https://gitlab.ensta-bretagne.fr/zerrbe/drivers-ddboat-v2
 
-The drivers are :
-* IMU (MAG, ACCEL, GYRO) : imu9_driver_v2.py
-* GPS (serial line, GPGLL message) : gps_driver_v2.py
-* Arduino motors command (serial line) : arduino_driver_v2.py
 
-The controller loop is composed of:
-* filter : DDBOAT_filter_v1.py
-* low level control : DDBOAT_controler.py
-* mission block toolbox : mission_param.py
-* trajectory tracking navigation : Mission_trajectory_tracking.py | Log saved in Log directory
+## ddboat_client 
+the client script used to communicate with the DDBOATs with tcp protocol
+works the the server script in the ddboat_drivers folder
 
-Mission instruction descibed by : mission_script.json
+## blueboat_client
+the client script used to communicate with the blueboats with mavlink protocol
+works with the blue os of the blueboat
 
-Additional tests:
-* synchronise time with GPS (hour min sec) : gps_driver_v3.py
-* synchronise time manually (year month day) : set_date.py
-* test motor controller : test_motor_control_loop.py
-* test the heading : test_compass.py
-* display heading and local global position : scout.py
-
-Compass parameters in compass_calibration/
-
-# the compass is calibrated using the tools from https://github.com/godardma/magnetic_calibration
-
-compass_recorder.py
-creates the data.txt file with a record of the magnetic measurement x y z
-
-after the calibration, the compass_parameters.json file is update
-in this file there are two parameters b (3d vector) and A (3x3 matrix)
-
-the correction is made with the linaer transformation
-mag_corrected = A * (mag - b)
-
-# the client_scripts folder contains the scripts to run on ground pc to communicate with the boat
+## simulator
+basic python simulator of the autonomous boats

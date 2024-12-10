@@ -9,7 +9,7 @@ if __name__ == "__main__":
         imu.setup_accel_filter(0)
 
         # open a log file to store the accel data
-        f = open("accel_data.txt","w")
+        f = open("accel_data.txt", "w")
 
         for i in range(2000):
             raw_accel = imu.read_accel_raw()
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     else:
         import matplotlib.pyplot as plt
         # read the data from the log file
-        f = open("accel_data.txt","r")
+        f = open("accel_data.txt", "r")
 
         fig,ax = plt.subplots()
         ax.set_title("Accelerometer data")

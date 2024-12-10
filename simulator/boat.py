@@ -228,48 +228,55 @@ def draw_traj(ax,traj, col='black', w=2):
 
 class SimuDisplay:
 
-    def __init__(self,size=(10,10),speed=False,grid=False):
+    def __init__(self,size=(10,10),speed=False,grid=False,
+                 v1min=0,v1max=1,v2min = 0, v2max=1):
         self.size_x,self.size_y = size[0], size[1]
-        self.fig = plt.figure()
+        self.fig = plt.figure(figsize=(10,5))
         self.speed = speed
         self.grid = grid
         if not speed:
             self.ax = self.fig.add_subplot(111)
         else:
             self.ax = self.fig.add_subplot(121)
-            # self.ax2 = self.fig.add_subplot(122)
-            # self.ax2.set_aspect('equal')
-            # self.ax2.set_title('Speed')
-            # self.ax2.set_xlabel('speed (m/s)')
-            # self.ax2.set_ylabel('angular speed (rad/s)')
+            self.ax2 = self.fig.add_subplot(122)
+            self.ax2.set_aspect('equal')
+
         self.ax.set_aspect('equal')
-        self.ax.set_title('Boat simulation')
+        self.v1min = v1min
+        self.v1max = v1max
+        self.v2min = v2min
+        self.v2max = v2max
         self.set_figure()
 
     def set_figure(self):
         self.ax.set_xlim(-self.size_x, self.size_x)
         self.ax.set_ylim(-self.size_y, self.size_y)
+        self.ax.set_title('Boat simulation')
+        self.ax.set_xlabel('px (m)')
+        self.ax.set_ylabel('py (m)')
         if self.grid:
             self.ax.grid()
+            
+        if self.speed:
+            self.ax2.set_title('Speed')
+            self.ax2.set_xlim(-0.1, self.v1max * 1.1)
+            self.ax2.set_ylim(-self.v2max * 1.1, self.v2max * 1.1)
+            self.ax2.set_xlabel('v1 (m/s)')
+            self.ax2.set_ylabel('v2 (rad/s)')
+
+            # plot the speed limits
+            self.ax2.plot([self.v1min, 0.5 * self.v1max], [self.v2min, self.v2max], 'k--')
+            self.ax2.plot([self.v1min, 0.5 * self.v1max], [-self.v2min, -self.v2max], 'k--')
+            self.ax2.plot([2 * self.v1min, 0.5 * self.v1max + self.v1min,
+                      self.v1max, 0.5 * self.v1max + self.v1min,
+                      2 * self.v1min],
+                     [0, self.v2max - self.v2min, 0, -self.v2max + self.v2min, 0], 'k--')
 
     def clear(self):
         self.ax.clear()
+        if self.speed:
+            self.ax2.clear()
         self.set_figure()
-        #
-        # if self.speed:
-        #     clear2(self.ax2)
-
-    # def draw_speed_limits(self,v1min,v1max,v2min,v2max):
-    #     # plot the speed limits
-    #     self.ax2.set_xlim = (-0.1, v1max * 1.1)
-    #     self.ax2.set_ylim = (-v2max * 1.1, v2max * 1.1)
-    #     self.ax2.plot([v1min, 0.5 * v1max], [v2min, v2max], 'k--')
-    #     self.ax2.plot([v1min, 0.5 * v1max], [-v2min, -v2max], 'k--')
-    #     self.ax2.plot([2 * v1min, 0.5 * v1max + v1min,
-    #               v1max, 0.5 * v1max + v1min,
-    #               2 * v1min],
-    #              [0, v2max - v2min, 0, -v2max + v2min, 0], 'k--')
-
 
 def clear2(ax,formater='%.0f'):
     try:

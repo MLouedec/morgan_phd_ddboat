@@ -1,12 +1,8 @@
-# circle patrol around the big boat
-
-import numpy as np
+# circle patrol (black) around the big boat (red)
 
 from boat import *
 import time
 from controller import *
-
-speed = True
 
 N = 10 # number of escort boats
 
@@ -32,16 +28,11 @@ for i in range(N):
     L_escort.append(Boat(Lx0[i],traj_memory_=20, motor_limitation=True))
 
 # simulation parameters
-sim = SimuDisplay()
+sim = SimuDisplay(speed=True,v1min=L_escort[0].v1min,v1max=L_escort[0].v1max,v2min=L_escort[0].v2min,v2max=L_escort[0].v2max)
 dt = 0.05  # time step
 T = 50.0  # simulation duration
 # N = int(T/dt)  # number of iterations
 
-# a figure to display the speed of the robot
-if speed:
-    fig, ax2 = plt.subplots()
-    ax2.set_xlim(0.1, L_escort[0].v1max*1.1)
-    ax2.set_ylim(-L_escort[0].v2max*1.1, L_escort[0].v2max*1.1)
 
 # simulation
 t = 0
@@ -52,16 +43,6 @@ p_dot_master = np.array([0,0])
 while t < T:
     t1 = time.time()
     sim.clear()
-    if speed:
-        clear2(ax2)
-
-        # plot the speed limits
-        ax2.plot([L_escort[0].v1min, 0.5 * L_escort[0].v1max], [L_escort[0].v2min, L_escort[0].v2max], 'k--')
-        ax2.plot([L_escort[0].v1min, 0.5 * L_escort[0].v1max], [-L_escort[0].v2min, -L_escort[0].v2max], 'k--')
-        ax2.plot([2 * L_escort[0].v1min, 0.5 * L_escort[0].v1max + L_escort[0].v1min,
-                  L_escort[0].v1max, 0.5 * L_escort[0].v1max + L_escort[0].v1min,
-                  2 * L_escort[0].v1min],
-                 [0, L_escort[0].v2max - L_escort[0].v2min, 0, -L_escort[0].v2max + L_escort[0].v2min, 0], 'k--')
 
     # master control input
     u = np.array([0,30])  # (left motor rotation speed, right motor rotation speed)
@@ -94,12 +75,12 @@ while t < T:
         draw_tank2(sim.ax,L_escort[i].x,"k")
         draw_traj(sim.ax,L_escort[i].traj,"k")
 
-        if speed:
+        if sim.speed:
             # plot the speed of the robot
-            ax2.plot(v[0], v[1], 'ko', markersize=5)
+            sim.ax2.plot(v[0], v[1], 'ko', markersize=5)
 
             # desired speed
-            ax2.plot(L_vd[i][0], L_vd[i][1], 'kx', markersize=10)
+            sim.ax2.plot(L_vd[i][0], L_vd[i][1], 'kx', markersize=10)
 
     # print time on the figure
     sim.ax.text(0.1, 0.9, 'Time: {:.2f}'.format(t), transform=sim.ax.transAxes)
